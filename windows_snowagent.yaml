@@ -37,10 +37,7 @@
     snowagent_install_file: >-
       {{ snowagent_working_dir }}\{{ snowagent_package_name }}
 
-    snowagent_mid_string: >-
-      {% for endpoint in snowagent_mid_servers.endpoints -%}
-      wss://{{ endpoint }}:{{ snowagent_mid_port }}/ws/events{% if not loop.last %},{% endif %}
-      {%- endfor %}
+    snowagent_mid_string: "{{ 'wss://' ~ snowagent_mid_servers.endpoints[0] ~ ':' ~ snowagent_mid_port ~ '/ws/events,' ~ 'wss://' ~ snowagent_mid_servers.endpoints[1] ~ ':' ~ snowagent_mid_port ~ '/ws/events' }}"
 
   tasks:
     - name: Ensure ACC API key was provided
@@ -60,6 +57,10 @@
       ansible.windows.win_get_url:
         url: "{{ snowagent_package_url }}"
         dest: "{{ snowagent_install_file }}"
+
+    - name: Show MID string
+      ansible.builtin.debug:
+        var: snowagent_mid_string
 
     - name: Install ACC agent
       ansible.windows.win_package:
