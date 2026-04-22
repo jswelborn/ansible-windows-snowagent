@@ -1,0 +1,16 @@
+---
+snowagent_package_source: "https://hts.jfrog.io/artifactory/hts-packages/"
+snowagent_package_prefix: "agent-client-collector-"
+
+snowagent_acc_versions:
+  staging:
+    windows: "5.0.0"
+    linux: "5.0.0"
+  production:
+    windows: "5.0.0"
+    linux: "5.0.0"
+
+snowagent_mid_servers:
+  endpoints:
+    - "snowaccmid1.hearst.com"
+    - "snowaccmid2.hearst.com"

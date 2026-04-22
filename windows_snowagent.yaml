@@ -1,0 +1,88 @@
+---
+- name: Install and configure ServiceNow ACC on Windows
+  hosts: all
+  gather_facts: true
+
+  vars_files:
+    - vars/snowagent.yaml
+
+  vars:
+    snowagent_policy_group: "{{ policy_group | default('staging') }}"
+    snowagent_working_dir: "C:\\Temp"
+    snowagent_service_name: "AgentClientCollector"
+
+    snowagent_environment: >-
+      {{
+        'staging'
+        if (snowagent_policy_group is regex('local|staging'))
+        else 'production'
+      }}
+
+    snowagent_mid_port: >-
+      {{
+        '8800'
+        if (snowagent_policy_group is regex('local|staging'))
+        else '443'
+      }}
+
+    snowagent_version: "{{ snowagent_acc_versions[snowagent_environment]['windows'] }}"
+
+    snowagent_package_suffix: "-windows-x64.msi"
+
+    snowagent_package_name: >-
+      {{ snowagent_package_prefix }}{{ snowagent_version }}{{ snowagent_package_suffix }}
+
+    snowagent_package_url: >-
+      {{ snowagent_package_source }}{{ snowagent_package_name }}
+
+    snowagent_install_file: >-
+      {{ snowagent_working_dir }}\\{{ snowagent_package_name }}
+
+    snowagent_mid_string: >-
+      {{
+        snowagent_mid_servers.endpoints
+        | map('regex_replace', '^(.*)$', 'wss://\\1:' ~ snowagent_mid_port ~ '/ws/events')
+        | join(',')
+      }}
+
+  tasks:
+    - name: Ensure ACC API key was provided
+      ansible.builtin.assert:
+        that:
+          - snowagent_acc_key is defined
+          - snowagent_acc_key | length > 0
+        fail_msg: "snowagent_acc_key not provided"
+      no_log: true
+
+    - name: Ensure temp directory exists
+      ansible.windows.win_file:
+        path: "{{ snowagent_working_dir }}"
+        state: directory
+
+    - name: Download ACC MSI
+      ansible.windows.win_get_url:
+        url: "{{ snowagent_package_url }}"
+        dest: "{{ snowagent_install_file }}"
+
+    - name: Install ACC agent
+      ansible.windows.win_package:
+        path: "{{ snowagent_install_file }}"
+        state: present
+        arguments: >-
+          /quiet /qn /norestart
+          ACC_API_KEY="{{ snowagent_acc_key }}"
+          ACC_MID="{{ snowagent_mid_string }}"
+      register: acc_install
+      no_log: true
+
+    - name: Ensure AgentClientCollector service is started
+      ansible.windows.win_service:
+        name: "{{ snowagent_service_name }}"
+        state: started
+
+    - name: Set servicenow password to never expire
+      ansible.windows.win_shell: |
+        $user = Get-LocalUser -Name "servicenow" -ErrorAction SilentlyContinue
+        if ($user) {
+          $user | Set-LocalUser -PasswordNeverExpires $true
+        }
