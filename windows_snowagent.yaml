@@ -73,7 +73,7 @@
           ACC_API_KEY="{{ snowagent_acc_key }}"
           ACC_MID="{{ snowagent_mid_string }}"
       register: acc_install
-      no_log: true
+      no_log: false
 
     - name: Ensure AgentClientCollector service is started
       ansible.windows.win_service:
