@@ -58,10 +58,6 @@
         url: "{{ snowagent_package_url }}"
         dest: "{{ snowagent_install_file }}"
 
-    - name: Show MID string
-      ansible.builtin.debug:
-        var: snowagent_mid_string
-
     - name: Install ACC agent
       ansible.windows.win_package:
         path: "{{ snowagent_install_file }}"
@@ -77,6 +73,10 @@
       ansible.windows.win_service:
         name: "{{ snowagent_service_name }}"
         state: started
+      register: snowagent_service_result
+      retries: 3
+      delay: 10
+      until: snowagent_service_result is succeeded
 
     - name: Set servicenow password to never expire
       ansible.windows.win_shell: |
