@@ -1,7 +1,7 @@
 ---
 - name: Install and configure ServiceNow ACC on Windows
   hosts: all
-  gather_facts: true
+  gather_facts: false
 
   vars_files:
     - vars/snowagent.yaml
@@ -38,6 +38,21 @@
       {{ snowagent_working_dir }}\{{ snowagent_package_name }}
 
     snowagent_mid_string: "{{ 'wss://' ~ snowagent_mid_servers.endpoints[0] ~ ':' ~ snowagent_mid_port ~ '/ws/events,' ~ 'wss://' ~ snowagent_mid_servers.endpoints[1] ~ ':' ~ snowagent_mid_port ~ '/ws/events' }}"
+  
+  pre_tasks:
+    - name: Set Kerberos password variable
+      ansible.builtin.set_fact:
+        kerberos_password: "{{ ansible_password | default(ansible_ssh_pass | default('')) }}"
+
+    - name: Obtain Kerberos ticket
+      ansible.builtin.shell: |
+        printf '%s\n' "{{ kerberos_password }}" | /usr/bin/kinit -V "{{ ansible_user }}"
+      delegate_to: localhost
+      changed_when: false
+      no_log: true
+
+    - name: Gather Windows facts
+      ansible.windows.setup:
 
   tasks:
     - name: Ensure ACC API key was provided
