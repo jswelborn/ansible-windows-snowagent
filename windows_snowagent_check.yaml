@@ -1,0 +1,25 @@
+---
+- name: Check Windows ServiceNow ACC service
+  hosts: all
+  gather_facts: false
+
+  vars:
+    service_name: AgentClientCollector
+
+  tasks:
+    - name: Gather ServiceNow ACC service info
+      ansible.windows.win_service_info:
+        name: "{{ service_name }}"
+      register: service_info
+
+    - name: Fail if ServiceNow ACC service is missing
+      ansible.builtin.fail:
+        msg: "ServiceNow ACC service is missing"
+      when: not service_info.exists
+
+    - name: Fail if ServiceNow ACC service is not running
+      ansible.builtin.fail:
+        msg: "ServiceNow ACC service exists but is not running"
+      when:
+        - service_info.exists
+        - service_info.services[0].state != "started"
